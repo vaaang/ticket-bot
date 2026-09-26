@@ -1,3 +1,15 @@
 {
-  "vivaticket": "available"
+  "vivaticket": "available",
+  "ticketone_7ago": {},
+  "ticketone_8ago": {},
+  "vivaticket_7ago": {
+    "Disco PIT": "available",
+    "Kiss PIT": "available",
+    "Front Standing": "available"
+  },
+  "vivaticket_8ago": {
+    "Disco PIT": "available",
+    "Kiss PIT": "available",
+    "Front Standing": "available"
+  }
 }

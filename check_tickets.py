@@ -18,7 +18,7 @@ CATEGORIES = [
 ]
 
 # Сколько символов после названия категории проверять на "недоступно"
-WINDOW = 400
+WINDOW = 700
 
 SOLD_OUT_PHRASES = [
     "non disponibile",
@@ -86,15 +86,57 @@ def send_telegram(text):
         print("Ошибка отправки в Telegram:", e)
 
 
+AVAILABILITY_HINTS = [
+    "€",
+    "acquista",
+    "seleziona",
+    "aggiungi",
+]
+
+
 def check_category(page_text_lower, category):
-    """Возвращает True, если категория похожа на доступную."""
+    """
+    Проверяет ВСЕ вхождения названия категории на странице (название
+    может повторяться, например в легенде карты рассадки).
+    Для каждого вхождения смотрит на окно текста вокруг:
+      - если рядом есть "esaurito"/"non disponibile" и т.п. -> распродано
+      - если явно есть признак цены/кнопки покупки и нет "esaurito" -> доступно
+      - если нет ни того, ни другого -> неопределённо (пропускаем это вхождение,
+        например это может быть просто легенда/цветовая метка без статуса)
+    Если хотя бы одно вхождение явно "доступно" -> категория доступна.
+    Иначе если хотя бы одно явно "распродано" -> распродана.
+    Если ни одного явного статуса не нашли -> None (пропустить, не know).
+    """
     cat_lower = category.lower()
-    idx = page_text_lower.find(cat_lower)
-    if idx == -1:
-        return None  # категория вообще не найдена на странице
-    window = page_text_lower[idx : idx + len(cat_lower) + WINDOW]
-    is_sold_out = any(phrase in window for phrase in SOLD_OUT_PHRASES)
-    return not is_sold_out
+    start = 0
+    saw_available = False
+    saw_sold_out = False
+    found_any = False
+
+    while True:
+        idx = page_text_lower.find(cat_lower, start)
+        if idx == -1:
+            break
+        found_any = True
+        window = page_text_lower[idx : idx + len(cat_lower) + WINDOW]
+
+        is_sold_out = any(phrase in window for phrase in SOLD_OUT_PHRASES)
+        has_hint = any(hint in window for hint in AVAILABILITY_HINTS)
+
+        if is_sold_out:
+            saw_sold_out = True
+        elif has_hint:
+            saw_available = True
+
+        start = idx + len(cat_lower)
+
+    if not found_any:
+        return None
+    if saw_available:
+        return True
+    if saw_sold_out:
+        return False
+    return None
 
 
 def fetch_rendered_html(browser, url):
